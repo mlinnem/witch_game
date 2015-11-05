@@ -6,9 +6,10 @@
     ],
     "files": [
         "./index.html",
+        "./Readme.MD",
         "./tsconfig.json",
+        "./witch_game_tile.js",
         "./witch_game.js",
-        "./witch_game.ts",
         "./WitchGame_ArtAssets.sketch"
     ]
 }
