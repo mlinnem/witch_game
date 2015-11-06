@@ -89,15 +89,16 @@ function addHauntedTree() {
 
     //listen to surrounding tiles
 
-    var surroundingTiles = getSurroundingTiles(1, hauntedtree.gridX, hauntedtree.gridY);
+    var surroundingTiles = getSurroundingTiles(1, getGridPos(hauntedtree));
     for (tile of surroundingTiles) {
       tile.onVisit.add(scare, this, 1, hauntedtree, tile);
+      result = "Adding to " + tile.posX + ", " + tile.posY + ".";
     }
 }
 
 function scare(visitingKid, hauntedTree, visitedTile) {
-      result = "GET SPOOPED";
-      var kidRelativeToTree = kidGridLocation(kid).subtract(hauntedTree.gridLocation);
+    //  result = "GET SPOOPED";
+      var kidRelativeToTree = Phaser.Point.subtract(getGridPos(hauntedTree), kidGridLocation(kid));
       var newDirection = kidRelativeToTree;
       kidDirection = newDirection;
       moveTo(kid, Phaser.Point.add(kidGridLocation(kid),kidDirection));
@@ -107,7 +108,7 @@ function scare(visitingKid, hauntedTree, visitedTile) {
 }
 
 function continueOn(the_this, visitingKid, visitedTile) {
-  result = "Continuing on...";
+  //result = "Continuing on...";
   //Will redirect to that speciic kid's continue on function if this is ever object oriented
   continueOnKid(visitingKid);
 }
@@ -120,11 +121,11 @@ function kidGridLocation(kid) {
     return getGridPos(spriteCenter(kid));
 }
 
-function getSurroundingTiles(distance, x, y) {
+function getSurroundingTiles(distance, position) {
   var surroundingTiles = [];
   for (var i = distance * -1; i <= distance; i++) {
     for (var j = distance * -1; j <= distance; j++) {
-      var possibleTile = getTILE(new Phaser.Point(x + i, y + j));
+      var possibleTile = getTILE(new Phaser.Point(position.x + i, position.y + j));
       if (possibleTile != null) {
         surroundingTiles.push(possibleTile);
       }
@@ -145,7 +146,7 @@ function setGridLocation(thing, gridLocation) {
   var pixelLocation = locationToPixelTopLeft(gridLocation);
   thing.x = pixelLocation.x;
   thing.y = pixelLocation.y;
-  thing.gridLocation = gridLocation;
+  //thing.gridLocation = gridLocation;
 }
 
 function locationToPixelCenter(location) {
@@ -180,8 +181,8 @@ function render() {
 }
 
 function kidReactToSurroundings() {
-  result = "Reacting! "
   var tileKidIsIn = getTILE(kidGridLocation(kid));
+  //result = "Reacting! " + tileKidIsIn.onVisit.getNumListeners();
   tileKidIsIn.onVisit.dispatch(this, kid, tileKidIsIn);
 }
 
