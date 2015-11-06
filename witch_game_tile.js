@@ -60,7 +60,7 @@ function create() {
     // fill the screen with as many TILEs as possible
     spawnBoard();
 
-    kid = createKid(5,5);
+    kid = createKid(8,8);
 
     // currently selected TILE starting position. used to stop player form moving TILEs too far.
     selectedTILEStartPos = { x: 0, y: 0 };
@@ -99,8 +99,33 @@ function addHauntedTree() {
     }
 }
 
-function scare(visitingKid, scarer) {
-    result = "Boo!";
+function scare(visitingKid, hauntedTree) {
+      result = "SCARE ENACTED!";
+      var diffX = kid.gridX - hauntedTree.gridX;
+      var diffY = kid.gridY - hauntedTree.gridY;
+      if (diffX == -1 && diffY == -1) {
+        //Kid is on NW side of tree
+        setDirection(kid, DIRECTION_NW);
+      }
+      else if (diffX == 1 && diffY == 1) {
+        //Kid is on SE side of tree
+        setDirection(kid,DIRECTION_SE);
+        result = "MOVE IT SE!";
+      }
+
+      // kid.x = lockToGrid(kid.x + kid.body.halfWidth);
+      // kid.y = lockToGrid(kid.y + kid.body.halfWidth);
+      // kid.body.velocity.setTo(SCARED_MOVE_SPEED * x, SCARED_MOVE_SPEED * y);
+      // kid.body.velocity.setMagnitude(SCARED_MOVE_SPEED);
+      // result = "" + x + "" + y;
+      // kid.frameName = 'Kid_Scared';
+      // kidState = "Scared";
+      // if (backToNormalEvent != null) {
+      //     game.time.events.remove(backToNormalEvent);
+      //     backToNormalEvent == null;
+      // }
+      // backToNormalEvent = game.time.events.add(Phaser.Timer.SECOND * 3, backToNormal, this);
+
 }
 
 function getSurroundingTiles(distance, x, y) {
@@ -117,11 +142,14 @@ function getSurroundingTiles(distance, x, y) {
 }
 
 function createKid(tileX, tileY) {
-  var kid = game.add.sprite(tileX * TILE_SIZE, tileY * TILE_SIZE, 'kid_spritesheet', 'Kid_Normal');
-  kid.gridX = tileX;
-  kid.gridY = tileY;
+  var kid = game.add.sprite(0, 0, 'kid_spritesheet', 'Kid_Normal');
   kidState = "Normal";
   game.physics.enable(kid, Phaser.Physics.ARCADE);
+  kid.body.x = tileX * TILE_SIZE;
+  kid.body.y = tileY * TILE_SIZE;
+  kid.body.setSize(25, 25, 50, 50);
+  kid.gridX = tileX;
+  kid.gridY = tileY;
   setDirection(kid, DIRECTION_SE);
   return kid;
 }
@@ -131,8 +159,8 @@ function update() {
   cursorsprite.y = lockToGrid(game.input.mousePointer.y);
 
   if (null != kid.body) {
-  kidActualTileX = getTILEPos(kid.body.x);
-  kidActualTileY = getTILEPos(kid.body.y);
+  kidActualTileX = getTILEPos(kid.body.center.x);
+  kidActualTileY = getTILEPos(kid.body.center.y);
 
   if (kid.gridX != kidActualTileX || kid.gridY != kidActualTileY) {
     kid.gridX = kidActualTileX;
@@ -140,8 +168,11 @@ function update() {
 
     var tileMovedInto = getTILE(kid.gridX, kid.gridY);
     tileMovedInto.onVisit.dispatch(kid);
+    result = "" + kid.gridX + ", " + kid.gridY
   }
   }
+
+  //result = "" + cursorsprite.x + ", " + cursorsprite.y;
 }
 
 function setDirection(kid, direction) {
@@ -151,11 +182,16 @@ function setDirection(kid, direction) {
       kid.body.velocity.setMagnitude(NORMAL_MOVE_SPEED);
       kidDirection = DIRECTION_SE;
       break;
+    case DIRECTION_NW:
+      kid.body.velocity.setTo(-NORMAL_MOVE_SPEED, -NORMAL_MOVE_SPEED);
+      kid.body.velocity.setMagnitude(NORMAL_MOVE_SPEED);
+      kidDirection = DIRECTION_NW;
+      break;
   }
 }
 
 function render() {
-  game.debug.text(result, 32,32);
+  game.debug.spriteInfo(kid, 32,32);
 }
 
 function lockToGrid(coord) {
