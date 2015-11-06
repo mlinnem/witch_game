@@ -103,15 +103,27 @@ function scare(visitingKid, hauntedTree) {
       result = "SCARE ENACTED!";
       var diffX = kid.gridX - hauntedTree.gridX;
       var diffY = kid.gridY - hauntedTree.gridY;
-      if (diffX == -1 && diffY == -1) {
-        //Kid is on NW side of tree
+      if (diffX == 0 && diffY == -1) {
+        //N
+        setDirection(kid, DIRECTION_N);
+      } else if (diffX == 1 && diffY == -1) {
+        //NE
+        setDirectioN(kid,DIRECTION_NE);
+      } else if (diffX == 1 & diffY == 0) {
+        setDirection(kid, DIRECTION_E);
+      } else if (diffX == 1 && diffY == 1) {
+        //Kid is on SE side of tree
+        setDirection(kid, DIRECTION_SE);
+      } else if (diffX == 0 && diffY == 1) {
+        setDirection(kid, DIRECTION_E);
+      } else if (diffX == -1 && diffY == 1) {
+        setDirection(kid, DIRECTION_SE);
+      } else if (diffX == -1 && diffY == 0) {
+        setDirection(kid, DIRECTION_W);
+      } else if (diffX == -1 && diffY == -1) {
         setDirection(kid, DIRECTION_NW);
       }
-      else if (diffX == 1 && diffY == 1) {
-        //Kid is on SE side of tree
-        setDirection(kid,DIRECTION_SE);
-        result = "MOVE IT SE!";
-      }
+
 
       // kid.x = lockToGrid(kid.x + kid.body.halfWidth);
       // kid.y = lockToGrid(kid.y + kid.body.halfWidth);
@@ -177,16 +189,47 @@ function update() {
 
 function setDirection(kid, direction) {
   switch (direction) {
+    case DIRECTION_N:
+      kid.body.velocity.setTo(0, -NORMAL_MOVE_SPEED);
+      kid.body.velocity.setMagnitude(NORMAL_MOVE_SPEED);
+      kidDirection = DIRECTION_N;
+      break;
+    case DIRECTION_NE:
+      kid.body.velocity.setTo(NORMAL_MOVE_SPEED, -NORMAL_MOVE_SPEED);
+      kid.body.velocity.setMagnitude(NORMAL_MOVE_SPEED);
+      kidDirection = DIRECTION_NE;
+      break;
+    case DIRECTION_E:
+      kid.body.velocity.setTo(NORMAL_MOVE_SPEED, 0);
+      kid.body.velocity.setMagnitude(NORMAL_MOVE_SPEED);
+      kidDirection = DIRECTION_E;
+      break;
     case DIRECTION_SE:
       kid.body.velocity.setTo(NORMAL_MOVE_SPEED, NORMAL_MOVE_SPEED);
       kid.body.velocity.setMagnitude(NORMAL_MOVE_SPEED);
       kidDirection = DIRECTION_SE;
+      break;
+    case DIRECTION_S:
+      kid.body.velocity.setTo(0, NORMAL_MOVE_SPEED);
+      kid.body.velocity.setMagnitude(NORMAL_MOVE_SPEED);
+      kidDirection = DIRECTION_S;
+      break;
+    case DIRECTION_SW:
+      kid.body.velocity.setTo(-NORMAL_MOVE_SPEED, NORMAL_MOVE_SPEED);
+      kid.body.velocity.setMagnitude(NORMAL_MOVE_SPEED);
+      kidDirection = DIRECTION_SW;
+      break;
+    case DIRECTION_W:
+      kid.body.velocity.setTo(-NORMAL_MOVE_SPEED, 0);
+      kid.body.velocity.setMagnitude(NORMAL_MOVE_SPEED);
+      kidDirection = DIRECTION_W;
       break;
     case DIRECTION_NW:
       kid.body.velocity.setTo(-NORMAL_MOVE_SPEED, -NORMAL_MOVE_SPEED);
       kid.body.velocity.setMagnitude(NORMAL_MOVE_SPEED);
       kidDirection = DIRECTION_NW;
       break;
+
   }
 }
 
@@ -239,6 +282,10 @@ function getTILEPos(coordinate) {
 
     return Math.floor(coordinate / TILE_SIZE_SPACED);
 
+}
+
+function tileCenter(tile) {
+  return new Phaser.Point(tile.x + TILE_SIZE / 2, tile.y + TILE_SIZE / 2);
 }
 
 // set the position on the board for a TILE
