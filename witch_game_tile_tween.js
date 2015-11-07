@@ -62,13 +62,11 @@ function create() {
     game.time.create();
 
     //KID SETUP
-    kid = createKid(new Phaser.Point(2,2));
+    kid = createKid(new Phaser.Point(0,0));
 
     hauntedtrees = game.add.group();
 
     game.input.onDown.add(addHauntedTree, this);
-
-    //game.input.addMoveCallback(slideTILE, this);
 
     cursors = game.input.keyboard.createCursorKeys();
     hauntedtreecursor = game.add.sprite(0, 0, 'hauntedtree');
@@ -89,16 +87,17 @@ function addHauntedTree() {
 
     //listen to surrounding tiles
 
-    var surroundingTiles = getSurroundingTiles(1, getGridPos(hauntedtree));
+    var surroundingTiles = getSurroundingTiles(1, getGridPosOfObject(hauntedtree));
+    log("Adding around " + getGridPosOfObject(hauntedtree).x + ", " + getGridPosOfObject(hauntedtree).y + ".");
     for (tile of surroundingTiles) {
-      tile.onVisit.add(scare, this, 1, hauntedtree, tile);
-      result = "Adding to " + tile.posX + ", " + tile.posY + ".";
+      tile.onVisit.add(scare, this, 1, kid, hauntedtree, tile);
+
     }
 }
 
-function scare(visitingKid, hauntedTree, visitedTile) {
-    //  result = "GET SPOOPED";
-      var kidRelativeToTree = Phaser.Point.subtract(getGridPos(hauntedTree), kidGridLocation(kid));
+function scare(context, kidforsomereason, timeforsomereason, visitingKid, hauntedTree, visitedTile) {
+      //TODO: Order variables were input doesn't seem to match how they are output here. Is this a PHASER bug?
+      var kidRelativeToTree = Phaser.Point.subtract(kidGridLocation(kid), getGridPosOfObject(hauntedTree));
       var newDirection = kidRelativeToTree;
       kidDirection = newDirection;
       moveTo(kid, Phaser.Point.add(kidGridLocation(kid),kidDirection));
@@ -108,17 +107,16 @@ function scare(visitingKid, hauntedTree, visitedTile) {
 }
 
 function continueOn(the_this, visitingKid, visitedTile) {
-  //result = "Continuing on...";
   //Will redirect to that speciic kid's continue on function if this is ever object oriented
   continueOnKid(visitingKid);
 }
 
 function continueOnKid(kid) {
-  moveTo(kid, Phaser.Point.add(kidGridLocation(kid), kidDirection));
+moveTo(kid, Phaser.Point.add(kidGridLocation(kid), kidDirection));
 }
 
 function kidGridLocation(kid) {
-    return getGridPos(spriteCenter(kid));
+    return getGridPosOfObject(kid);
 }
 
 function getSurroundingTiles(distance, position) {
@@ -135,7 +133,8 @@ function getSurroundingTiles(distance, position) {
 }
 
 function createKid(location) {
-  var kid = game.add.sprite(0, 0, 'kid_spritesheet', 'Kid_Normal');
+  var kid = game.add.sprite(0, 0, 'kid_spritesheet', 'NormalKid.png');
+  kid.scale.setTo(.25, .25); //TODO: scale down in the export, since this leads to fuzziness
   kidState = "Wandering";
   kidDirection = DIRECTION_SE;
   setGridLocation(kid, location);
@@ -168,27 +167,32 @@ function update() {
 }
 
 function moveTo(kid, gridLoc) {
-  //result = "Movin to " + gridLoc.x + ", " + gridLoc.y;
   var tile = getTILE(gridLoc);
   var move = game.add.tween(kid);
-  move.to({x: spriteCenter(tile).x, y: spriteCenter(tile).y}, 2000, Phaser.Easing.Linear.None);
+  var kidCenterOffset = TILE_SIZE / 2; //Need to offset since we're moving x and y, not kid center to tile
+  move.to({x: spriteCenter(tile).x - kidCenterOffset, y: spriteCenter(tile).y - kidCenterOffset}, 2000, Phaser.Easing.Linear.None);
   move.onComplete.addOnce(kidReactToSurroundings, this, kid, tile);
   move.start();
+  log("kid moving to " + getGridPosOfObject(tile).x + ", " + getGridPosOfObject(tile).y);
 }
 
 function render() {
   game.debug.text(result, 32,32);
 }
 
+function log(message) {
+  result = message + "; " + result;
+}
+
 function kidReactToSurroundings() {
   var tileKidIsIn = getTILE(kidGridLocation(kid));
-  //result = "Reacting! " + tileKidIsIn.onVisit.getNumListeners();
+  log("Reacting to " + getGridPosOfObject(tileKidIsIn).x + ", " + getGridPosOfObject(tileKidIsIn).y + "listeners: " + tileKidIsIn.onVisit.getNumListeners());
   tileKidIsIn.onVisit.dispatch(this, kid, tileKidIsIn);
 }
 
 
 function testereeno() {
-  result = "BLAM!"
+  log("BLAM!");
 }
 
 function lockToGrid(coord) {
@@ -240,8 +244,13 @@ function getGridPosSingle(num) {
 
 }
 
-function getGridPos(coordinate) {
+function getGridPosOfPixel(coordinate) {
   return new Phaser.Point(Math.floor(coordinate.x/TILE_SIZE), Math.floor(coordinate.y/TILE_SIZE));
+}
+
+function getGridPosOfObject(object) {
+  //Objects are judged to be located wherever their center pixel is located in the grid
+  return getGridPosOfPixel(spriteCenter(object));
 }
 
 // set the position on the board for a TILE

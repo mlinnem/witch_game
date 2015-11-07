@@ -1,0 +1,29 @@
+{"frames": [
+{
+	"filename": "Kid_Scared",
+	"frame": {"x":2,"y":2,"w":125,"h":125},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":125,"h":125},
+	"sourceSize": {"w":125,"h":125},
+	"pivot": {"x":0.5,"y":0.5}
+},
+{
+	"filename": "Kid_Normal",
+	"frame": {"x":2,"y":129,"w":125,"h":125},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":125,"h":125},
+	"sourceSize": {"w":125,"h":125},
+	"pivot": {"x":0.5,"y":0.5}
+}],
+"meta": {
+	"app": "http://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "kid_spritesheet.png",
+	"format": "RGBA8888",
+	"size": {"w":129,"h":256},
+	"scale": "1",
+	"smartupdate": "$TexturePacker:SmartUpdate:c0bbf7b4bcd881a1bc3b9a16c49ebd43:da01078f1a3ed86a188d406aaa63140b:a021de7d541a33fdc88a19289462fb21$"
+}
+}
