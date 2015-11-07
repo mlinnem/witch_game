@@ -34,6 +34,8 @@ var breatheIn;
 var breatheOut;
 var finalBreatheIn;
 var finalBreatheOut;
+var consider;
+var stopConsidering;
 
 //Tiles traversed in a second
 var NORMAL_MOVE_SPEED = .5;
@@ -75,23 +77,46 @@ function create() {
 
     hauntedtrees = game.add.group();
 
-    game.input.onDown.add(addHauntedTree, this);
 
     cursors = game.input.keyboard.createCursorKeys();
     hauntedtreecursor = game.add.sprite(25, 25, 'hauntedtree');
     hauntedtreecursor.alpha = .3;
     cursorsprite = hauntedtreecursor;
     continueOnKid(kid);
+
+    game.input.onDown.add(function() {tryToAdd(addHauntedTree)}, this);
+
 }
 
-function addHauntedTree() {
-    var cursorGridPosX = getGridPosSingle(game.input.mousePointer.x);
-    var cursorGridPosY = getGridPosSingle(game.input.mousePointer.y);
+function tryToAdd(addFunction) {
+  var cursorGridPosX = getGridPosSingle(game.input.mousePointer.x);
+  var cursorGridPosY = getGridPosSingle(game.input.mousePointer.y);
+  var cursorGridPos = new Phaser.Point(cursorGridPosX, cursorGridPosY);
+  if (! visibleToKid(cursorGridPos)) {
+    addFunction.apply(this, [cursorGridPos]);
+  }
+}
+
+function visibleToKid(gridPositionInQuestion) {
+  var kidGridPos = getGridPosOfObject(kid);
+  var surroundingTiles = getSurroundingTiles(1, kidGridPos);
+  var isVisibleToKid = false;
+  for (tile of surroundingTiles) {
+    var tileGridPos = getGridPosOfObject(tile);
+    if (tileGridPos.x == gridPositionInQuestion.x && tileGridPos.y == gridPositionInQuestion.y) {
+      isVisibleToKid = true;
+      break;
+    }
+  }
+  return isVisibleToKid;
+}
+
+function addHauntedTree(gridPositionToAddTo) {
 
     var hauntedtree = hauntedtrees.create(0, 0, 'hauntedtree');
     hauntedtree.anchor.x = .5;
     hauntedtree.anchor.y = .5;
-    setGridLocation(hauntedtree, new Phaser.Point(cursorGridPosX, cursorGridPosY));
+    setGridLocation(hauntedtree, gridPositionToAddTo);
     hauntedtree.name = 'hauntedtree';
 
     //listen to surrounding tiles
@@ -118,6 +143,7 @@ function scare(context, kidforsomereason, timeforsomereason, visitingKid, haunte
 function kidBecomeScared(kid) {
 
 
+  stopAllAnimations();
   kidState = STATE_SCAREDSEEING;
 
   kid.frameName = 'ScaredKid.png';
@@ -130,9 +156,7 @@ function kidBecomeScared(kid) {
   jumpDown.onComplete.add(function() {
       kidState = STATE_SCAREDRUNNING;
 
-
-
-      breatheHeavily();
+      lookBreatheHeavily();
       scareCountdown = 3;
       continueOnKid(kid);
       }
@@ -141,19 +165,19 @@ function kidBecomeScared(kid) {
   jumpUp.start();
 }
 
-function breatheHeavily() {
+function lookBreatheHeavily() {
   //breathe heavily
   breatheIn = game.add.tween(kid.scale);
   breatheOut = game.add.tween(kid.scale);
   breatheIn.to({x: .30, y: .30}, 320, Phaser.Easing.Sinusoidal.In);
  breatheOut.to({x: .25, y: .25},320, Phaser.Easing.Sinusoidal.Out);
   breatheIn.chain(breatheOut);
-  breatheOut.onComplete.add(breatheHeavily);
+  breatheOut.onComplete.add(lookBreatheHeavily);
   breatheIn.start();
   log("Breathing heavily");
 }
 
-function stopBreathingHeavily() {
+function lookStopBreathingHeavily() {
   breatheIn.stop(false);
   breatheOut.stop(false);
   //final exhale
@@ -167,9 +191,31 @@ function stopBreathingHeavily() {
 }
 
 function kidStopScared(kid) {
-  stopBreathingHeavily();
+  lookStopBreathingHeavily();
   kidState = STATE_WANDERING;
   kid.frameName = "NormalKid.png";
+}
+
+function stopAllAnimations() {
+  //TODO: Probably better way to do this
+  if (null != breatheIn) {
+    breatheIn.stop();
+  }
+    if (null != breatheOut) {
+  breatheOut.stop();
+}
+  if (null != finalBreatheIn) {
+  finalBreatheIn.stop();
+}
+  if (null != finalBreatheOut) {
+  finalBreatheOut.stop();
+}
+  if (null != consider) {
+  consider.stop();
+}
+  if (null != stopConsidering) {
+  stopConsidering.stop();
+}
 }
 
 function considerHowToDealWithWall(kid, whereToMove) {
@@ -182,13 +228,13 @@ function considerHowToDealWithWall(kid, whereToMove) {
 }
 
 function lookConsidering(kid) {
-    var consider = game.add.tween(kid.scale);
+    consider = game.add.tween(kid.scale);
     consider.to({x: .25, y: .22}, 80, Phaser.Easing.Linear.None);
     consider.start();
 }
 
 function lookDecidedOnDirection() {
-    var stopConsidering = game.add.tween(kid.scale);
+    stopConsidering = game.add.tween(kid.scale);
     stopConsidering.to({x: .25, y: .25}, 100, Phaser.Easing.Linear.In);
     stopConsidering.start();
 }
@@ -256,7 +302,7 @@ function createKid(location) {
   var kid = game.add.sprite(0, 0, 'kid_spritesheet', 'NormalKid.png');
   kid.scale.setTo(.25, .25); //TODO: scale down in the export, since this leads to fuzziness
   kidState = STATE_WANDERING;
-  kidDirection = DIRECTION_SE;
+  kidDirection = DIRECTION_SW;
   setGridLocation(kid, location);
   kid.anchor.x = 0.5;
   kid.anchor.y = 0.5;
