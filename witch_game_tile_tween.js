@@ -29,6 +29,7 @@ var kid;
 var kidState;
 
 var scareCountdown;
+var followCountdown;
 //TODO: probably shouldn't be global
 var breatheIn;
 var breatheOut;
@@ -36,6 +37,7 @@ var finalBreatheIn;
 var finalBreatheOut;
 var consider;
 var stopConsidering;
+var wander;
 
 //Tiles traversed in a second
 var NORMAL_MOVE_SPEED = .5;
@@ -48,9 +50,15 @@ const STATE_SIGNSEEING = 6;
 const STATE_SIGNAPPROACHING = 2;
 const STATE_SIGNREADING = 3;
 const STATE_SIGNFOLLOWING = 4;
-const STATE_
+
+const PRECEDENCE_SCARE = 5;
+const PRECEDENCE_SIGNCENTER = 3;
+const PRECEDENCE_SIGNAROUND = 2;
+const PRECEDENCE_NOTHINGTOSEE = 0;
+
 
 var kidDirection;
+var lastSignKidSaw;
 
 var TILEs;
 
@@ -75,16 +83,21 @@ function create() {
     //KID SETUP
     kid = createKid(new Phaser.Point(28,10));
 
+    //OTHER OBJECTS SETUP
     hauntedtrees = game.add.group();
+    signs = game.add.group();
 
-
+    //CURSOR SETUP
     cursors = game.input.keyboard.createCursorKeys();
     hauntedtreecursor = game.add.sprite(25, 25, 'hauntedtree');
     hauntedtreecursor.alpha = .3;
     cursorsprite = hauntedtreecursor;
+
+    //START GAME
     continueOnKid(kid);
 
     game.input.onDown.add(function() {tryToAdd(addHauntedTree)}, this);
+    //game.input.onDown.add(function() {tryToAdd(addSign)}, this);
 
 }
 
@@ -111,33 +124,75 @@ function visibleToKid(gridPositionInQuestion) {
   return isVisibleToKid;
 }
 
-function addHauntedTree(gridPositionToAddTo) {
+function addSign(gridPositionToAddTo) {
 
-    var hauntedtree = hauntedtrees.create(0, 0, 'hauntedtree');
-    hauntedtree.anchor.x = .5;
-    hauntedtree.anchor.y = .5;
-    setGridLocation(hauntedtree, gridPositionToAddTo);
-    hauntedtree.name = 'hauntedtree';
+    var sign = signs.create(0, 0, 'sign');
+    sign.anchor.x = .5;
+    sign.anchor.y = .5;
+    setGridLocation(sign, gridPositionToAddTo);
+    sign.name = 'sign';
 
     //listen to surrounding tiles
 
-    var surroundingTiles = getSurroundingTiles(1, getGridPosOfObject(hauntedtree));
-    log("Adding around " + getGridPosOfObject(hauntedtree).x + ", " + getGridPosOfObject(hauntedtree).y + ".");
+    var surroundingTiles = getSurroundingTiles(1, getGridPosOfObject(sign));
+    log("Adding sign around " + getGridPosOfObject(sign).x + ", " + getGridPosOfObject(sign).y + ".");
     for (tile of surroundingTiles) {
-      tile.onVisit.add(scare, this, 1, kid, hauntedtree, tile);
-
+      if (getGridPosOfObject(tile).equals(getGridPosOfObject(sign))) {
+        tile.onVisit.add(seeSign, this, PRECEDENCE_SIGNCENTER, kid, sign, tile);
+    } else {
+        tile.onVisit.add(seeSign, this, PRECEDENCE_SIGNAROUND, kid, sign, tile);
+    }
     }
 }
 
-function scare(context, kidforsomereason, timeforsomereason, visitingKid, hauntedTree, visitedTile) {
-      //TODO: Order variables were input doesn't seem to match how they are output here. Is this a PHASER bug?
-      var kidRelativeToTree = Phaser.Point.subtract(kidGridLocation(kid), getGridPosOfObject(hauntedTree));
-      var newDirection = kidRelativeToTree;
+function addHauntedTree(gridPositionToAddTo) {
+  var hauntedtree = hauntedtrees.create(0, 0, 'hauntedtree');
+  hauntedtree.anchor.x = .5;
+  hauntedtree.anchor.y = .5;
+  setGridLocation(hauntedtree, gridPositionToAddTo);
+  hauntedtree.name = 'hauntedtree';
+
+  //listen to surrounding tiles
+
+  var surroundingTiles = getSurroundingTiles(1, getGridPosOfObject(hauntedtree));
+  log("Adding around " + getGridPosOfObject(hauntedtree).x + ", " + getGridPosOfObject(hauntedtree).y + ".");
+  for (tile of surroundingTiles) {
+    tile.onVisit.add(scare, this, PRECEDENCE_SCARE, kid, hauntedtree, tile);
+  }
+}
+
+//TODO: Figure out why these first 3 variables are put into the function
+function seeSign(context, kidforsomereason, tileforsomereason, visitingKid, sign, visitedTile) {
+      var signRelativeToKid = Phaser.Point.subtract(getGridPosOfObject(sign), kidGridLocation(kid));
+      if (kidState == STATE_SIGNAPPROACHING && sign == lastSignKidSaw && signRelativeToKid.equals(new Phaser.Point(0,0))) {
+        //Kid is seeing the sign he was approaching, at his current location
+        kidReadSign(kid, sign);
+        visitedTile.onVisit.halt();
+      } else if (sign != lastSignKidSaw) {
+      //TODO: Should this be here or in the function below?
+      var newDirection = signRelativeToKid;
       kidDirection = newDirection;
-      kidBecomeScared(kid);
-        //prevents other lower priority actions from taking effect
-      //TODO: Handle simultaneous scare corner case (overlapping scare areas of two trees)
+      kidNoticeSign(kid, sign);
       visitedTile.onVisit.halt();
+      }
+      //prevents other lower priority actions from taking effect
+    }
+
+function kidLookWandering(kid) {
+  wander = game.add.tween(kid.scale);
+  wander.to({x: .25, y: .25}, 100, Phaser.Easing.Sinusoidal.In);
+  wander.start();
+}
+
+function scare(context, kidforsomereason, tileforsomereason, visitingKid, hauntedTree, visitedTile) {
+  //TODO: Figure out why these first 3 variables are put into the function
+  var kidRelativeToTree = Phaser.Point.subtract(kidGridLocation(kid), getGridPosOfObject(hauntedTree));
+  var newDirection = kidRelativeToTree;
+  kidDirection = newDirection;
+  kidBecomeScared(kid);
+    //prevents other lower priority actions from taking effect
+  //TODO: Handle simultaneous scare corner case (overlapping scare areas of two trees)
+  visitedTile.onVisit.halt();
 }
 
 function kidBecomeScared(kid) {
@@ -163,6 +218,48 @@ function kidBecomeScared(kid) {
   );
 
   jumpUp.start();
+}
+
+function kidNoticeSign(kid, sign) {
+  stopAllAnimations();
+  kidState = STATE_SIGNSEEING;
+  kidLookConsidering(kid);
+  game.time.events.add(600, function() {
+    if (getGridPosOfObject(kid).equals(getGridPosOfObject(sign))) {
+      kidReadSign(kid, sign);
+    } else {
+      kidApproachSign(kid, sign);
+    }
+   },
+    this);
+}
+
+//TODO: Test side by side signs pointing at each other
+function kidApproachSign(kid, sign) {
+  kidState = STATE_SIGNAPPROACHING;
+  lastSignKidSaw = sign;
+  kidLookConsidering(kid);
+  continueOnKid(kid);
+}
+
+function kidReadSign(kid, sign) {
+  stopAllAnimations();
+  kidState = STATE_SIGNREADING;
+  kidLookConsidering(kid);
+  game.time.events.add(600, function() {
+    kidState = STATE_SIGNFOLLOWING;
+    followCountdown = 2;
+    log("Kid should be following sign");
+    kidFaceSignDirection(kid, sign);
+    kidLookWandering(kid);
+    continueOnKid(kid);
+   },
+    this);
+}
+
+function kidFaceSignDirection(kid, sign) {
+  //TODO: Make this real.
+  kidDirection = DIRECTION_E;
 }
 
 function lookBreatheHeavily() {
@@ -196,6 +293,12 @@ function kidStopScared(kid) {
   kid.frameName = "NormalKid.png";
 }
 
+function kidStopFollowing(kid) {
+  kidState = STATE_WANDERING;
+  kid.frameName = "NormalKid.png";
+  lastSignKidSaw = null;
+}
+
 function stopAllAnimations() {
   //TODO: Probably better way to do this
   if (null != breatheIn) {
@@ -219,7 +322,7 @@ function stopAllAnimations() {
 }
 
 function considerHowToDealWithWall(kid, whereToMove) {
-  lookConsidering(kid);
+  kidLookConsidering(kid);
 
   game.time.events.add(600, function() {
     decideOnDirectionAndMove(kid, whereToMove);
@@ -227,7 +330,7 @@ function considerHowToDealWithWall(kid, whereToMove) {
     this);
 }
 
-function lookConsidering(kid) {
+function kidLookConsidering(kid) {
     consider = game.add.tween(kid.scale);
     consider.to({x: .25, y: .22}, 80, Phaser.Easing.Linear.None);
     consider.start();
@@ -256,6 +359,12 @@ function continueOnKid(kid) {
   if (kidState == STATE_SCAREDRUNNING && scareCountdown == 0) {
     kidStopScared(kid);
   }
+  if (kidState == STATE_SIGNFOLLOWING && followCountdown == 0) {
+    kidStopFollowing(kid);
+  }
+
+
+
 
   switch(kidState) {
     case STATE_WANDERING:
@@ -275,6 +384,25 @@ function continueOnKid(kid) {
         moveTo(kid, newWhereToMove, SCARED_MOVE_SPEED);
       } else {
         moveTo(kid, whereToMove, SCARED_MOVE_SPEED);
+      }
+      break;
+    case STATE_SIGNAPPROACHING:
+      log("Approaching...");
+      if (getGridPosOfObject(kid).equals(getGridPosOfObject(lastSignKidSaw))) {
+        kidReadSign(kid);
+      } else {
+        var whereToMove = Phaser.Point.add(kidGridLocation(kid), kidDirection);
+        moveTo(kid, whereToMove, NORMAL_MOVE_SPEED);
+      }
+      break;
+    case STATE_SIGNFOLLOWING:
+      log("Following...");
+      followCountdown --;
+      var whereToMove = Phaser.Point.add(kidGridLocation(kid), kidDirection);
+      if (willHitEdge(kid, whereToMove)) {
+        considerHowToDealWithWall(kid, whereToMove);
+      } else {
+        moveTo(kid, whereToMove, NORMAL_MOVE_SPEED);
       }
       break;
   }
@@ -403,7 +531,7 @@ function spawnBoard() {
             TILE.anchor.x = .5;
             TILE.anchor.y = .5;
             //If no other action takes precedence, kid continues on from the tile by default.
-            TILE.onVisit.add(continueOn, this, -1, TILE);
+            TILE.onVisit.add(continueOn, this, PRECEDENCE_NOTHINGTOSEE, TILE);
             //TILE.events.onInputDown.add(selectTILE, this);
             //TILE.events.onInputUp.add(releaseTILE, this);
             //randomizeTILEColor(TILE);
