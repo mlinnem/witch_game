@@ -13,15 +13,16 @@ var TILE_SIZE_SPACED = TILE_SIZE + TILE_SPACING;
 var BOARD_COLS;
 var BOARD_ROWS;
 
-
-const DIRECTION_N  = new Phaser.Point( 0, -1);
-const DIRECTION_NE = new Phaser.Point( 1, -1);
-const DIRECTION_E  = new Phaser.Point( 1,  0);
-const DIRECTION_SE = new Phaser.Point( 1,  1);
-const DIRECTION_S  = new Phaser.Point( 0,  1);
-const DIRECTION_SW = new Phaser.Point(-1,  1);
-const DIRECTION_W  = new Phaser.Point(-1,  0);
-const DIRECTION_NW = new Phaser.Point(-1, -1);
+var Direction = {
+   N:  new Phaser.Point( 0, -1),
+  NE:  new Phaser.Point( 1, -1),
+   E:  new Phaser.Point( 1,  0),
+  SE:  new Phaser.Point( 1,  1),
+   S:  new Phaser.Point( 0,  1),
+  SW:  new Phaser.Point(-1,  1),
+   W:  new Phaser.Point(-1,  0),
+  NW:  new Phaser.Point(-1, -1)
+}
 
 //KID STUFF
 
@@ -170,6 +171,27 @@ function visibleToKid(gridPositionInQuestion) {
   return isVisibleToKid;
 }
 
+function getRandomIntInclusive(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getRandomDirection() {
+  return new Phaser.Point(getRandomIntInclusive(-1, 1), getRandomIntInclusive(-1, 1));
+}
+
+function setSignDirection(sign, dir) {
+  sign.direction = dir;
+//sign points right by default, so we start with E as 0
+if (dir.equals(Direction.E)) { sign.angle = 0; } else if
+(dir.equals(Direction.SE)) { sign.angle = 45; } else if
+(dir.equals(Direction.S)) { sign.angle = 90; } else if
+(dir.equals(Direction.SW)) { sign.angle = 135; } else if
+(dir.equals(Direction.W)) { sign.angle = 180; } else if
+(dir.equals(Direction.NW)) { sign.angle = 225; } else if
+(dir.equals(Direction.N)) { sign.angle = 270; } else if
+(dir.equals(Direction.NE)) { sign.angle = 315; }
+}
+
 function addSign(gridPositionToAddTo) {
 
     var sign = signs.create(0, 0, 'sign');
@@ -177,6 +199,8 @@ function addSign(gridPositionToAddTo) {
     sign.anchor.y = .5;
     setGridLocation(sign, gridPositionToAddTo);
     sign.name = 'sign';
+    setSignDirection(sign, getRandomDirection());
+
 
     //listen to surrounding tiles
 
@@ -305,7 +329,7 @@ function kidReadSign(kid, sign) {
 
 function kidFaceSignDirection(kid, sign) {
   //TODO: Make this real.
-  kidDirection = DIRECTION_E;
+  kidDirection = sign.direction;
 }
 
 function lookBreatheHeavily() {
@@ -476,7 +500,7 @@ function createKid(location) {
   var kid = game.add.sprite(0, 0, 'kid_spritesheet', 'NormalKid.png');
   kid.scale.setTo(.25, .25); //TODO: scale down in the export, since this leads to fuzziness
   kidState = STATE_WANDERING;
-  kidDirection = DIRECTION_SW;
+  kidDirection = Direction.SW;
   setGridLocation(kid, location);
   kid.anchor.x = 0.5;
   kid.anchor.y = 0.5;
