@@ -284,9 +284,7 @@ function getTILEPos(coordinate) {
 
 }
 
-function tileCenter(tile) {
-  return new Phaser.Point(tile.x + TILE_SIZE / 2, tile.y + TILE_SIZE / 2);
-}
+
 
 // set the position on the board for a TILE
 function setTILEPos(TILE, posX, posY) {

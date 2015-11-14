@@ -56,6 +56,11 @@ const PRECEDENCE_SIGNCENTER = 3;
 const PRECEDENCE_SIGNAROUND = 2;
 const PRECEDENCE_NOTHINGTOSEE = 0;
 
+var hauntedtreecursor;
+var signcursor;
+const CURSORMODE_HAUNTEDTREE = 0;
+const CURSORMODE_SIGN = 1;
+
 
 var kidDirection;
 var lastSignKidSaw;
@@ -87,18 +92,59 @@ function create() {
     hauntedtrees = game.add.group();
     signs = game.add.group();
 
-    //CURSOR SETUP
-    cursors = game.input.keyboard.createCursorKeys();
-    hauntedtreecursor = game.add.sprite(25, 25, 'hauntedtree');
-    hauntedtreecursor.alpha = .3;
-    cursorsprite = hauntedtreecursor;
+    setupCursors();
+
+
+
 
     //START GAME
     continueOnKid(kid);
 
-    game.input.onDown.add(function() {tryToAdd(addHauntedTree)}, this);
-    //game.input.onDown.add(function() {tryToAdd(addSign)}, this);
+    oneKey = game.input.keyboard.addKey(Phaser.Keyboard.ONE);
+    oneKey.onDown.add(cursorModeHauntedTree, this);
+    twoKey = game.input.keyboard.addKey(Phaser.Keyboard.TWO);
+    twoKey.onDown.add(cursorModeSign, this);
 
+    game.input.onDown.add(triggerClickEvent, this);
+
+}
+
+function setupCursors() {
+  //CURSOR SETUP
+  cursors = game.input.keyboard.createCursorKeys();
+  hauntedtreecursor = game.add.sprite(25, 25, 'hauntedtree');
+  hauntedtreecursor.alpha = .3;
+
+  signcursor = game.add.sprite(25, 35, 'sign');
+  signcursor.alpha = .3;
+
+  cursorsprite = hauntedtreecursor;
+  cursorModeHauntedTree();
+}
+
+function triggerClickEvent() {
+  switch (cursorMode) {
+    case CURSORMODE_HAUNTEDTREE:
+        tryToAdd(addHauntedTree);
+        break;
+    case CURSORMODE_SIGN:
+      tryToAdd(addSign);
+      break;
+  }
+}
+
+function cursorModeHauntedTree() {
+  cursorsprite.alpha = 0;
+  cursorMode = CURSORMODE_HAUNTEDTREE;
+  cursorsprite = hauntedtreecursor;
+  cursorsprite.alpha = .3;
+}
+
+function cursorModeSign() {
+  cursorsprite.alpha = 0;
+  cursorMode = CURSORMODE_SIGN;
+  cursorsprite = signcursor;
+  cursorsprite.alpha = .3;
 }
 
 function tryToAdd(addFunction) {
