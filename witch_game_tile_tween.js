@@ -1,8 +1,13 @@
 // Example by https://twitter.com/awapblog
 
-var game = new Phaser.Game(800, 600, Phaser.CANVAS, '', { preload: preload, create: create, update: update, render: render });
+
+const BOARD_WIDTH = 800;
+const BOARD_HEIGHT = 600;
+
+var game = new Phaser.Game(BOARD_WIDTH, BOARD_HEIGHT, Phaser.CANVAS, '', { preload: preload, create: create, update: update, render: render });
 
 
+//TODO: Make it so you can't put sign on hauntedtree and vice versa
 //DEBUG STUFF
 var result;
 
@@ -60,13 +65,19 @@ const PRECEDENCE_NOTHINGTOSEE = 0;
 var hauntedtreecursor;
 var signcursor;
 const CURSORMODE_HAUNTEDTREE = 0;
-const CURSORMODE_SIGN = 1;
+const CURSORMODE_SIGNPENDING = 1;
+const CURSORMODE_SIGNDIRECTIONPICKING = 2;
+
+var pendingSignLoc;
 
 
 var kidDirection;
 var lastSignKidSaw;
 
 var TILEs;
+
+//related to line drawing
+var bmd;
 
 function preload() {
 
@@ -78,6 +89,28 @@ function preload() {
     game.load.image('witch_hut_1', "assets/sprites/witch_hut_1.png");
     game.load.image('sign', "assets/sprites/Sign.png");
 }
+
+
+
+function clearLine() {
+  bmd.clear();
+}
+
+function drawLine(){
+  if (cursorMode == CURSORMODE_SIGNDIRECTIONPICKING) {
+  bmd.clear();
+  bmd.ctx.beginPath();
+  bmd.ctx.beginPath();
+  var pendingSignPixelLoc = locationToPixelCenter(pendingSignLoc);
+  bmd.ctx.moveTo(pendingSignPixelLoc.x, pendingSignPixelLoc.y);
+  bmd.ctx.lineTo(game.input.x , game.input.y);
+  bmd.ctx.lineWidth = 2;
+  bmd.ctx.stroke();
+  bmd.ctx.closePath();
+  bmd.render();
+}
+  //bmd.refreshBuffer();
+};
 
 function create() {
 
@@ -93,6 +126,15 @@ function create() {
     hauntedtrees = game.add.group();
     signs = game.add.group();
 
+    bmd = game.add.bitmapData(BOARD_WIDTH,BOARD_HEIGHT);
+    var color = 'white';
+
+    bmd.ctx.beginPath();
+    bmd.ctx.lineWidth = "2";
+    bmd.ctx.strokeStyle = color;
+    bmd.ctx.stroke();
+    sprite = game.add.sprite(0, 0, bmd);
+
     setupCursors();
 
 
@@ -104,11 +146,13 @@ function create() {
     oneKey = game.input.keyboard.addKey(Phaser.Keyboard.ONE);
     oneKey.onDown.add(cursorModeHauntedTree, this);
     twoKey = game.input.keyboard.addKey(Phaser.Keyboard.TWO);
-    twoKey.onDown.add(cursorModeSign, this);
+    twoKey.onDown.add(cursorModeSignPending, this);
 
     game.input.onDown.add(triggerClickEvent, this);
+    game.input.onUp.add(triggerUpClickEvent, this);
 
 }
+
 
 function setupCursors() {
   //CURSOR SETUP
@@ -126,11 +170,22 @@ function setupCursors() {
 function triggerClickEvent() {
   switch (cursorMode) {
     case CURSORMODE_HAUNTEDTREE:
-        tryToAdd(addHauntedTree);
+        tryToAdd(addHauntedTree, getCursorGridLoc);
         break;
-    case CURSORMODE_SIGN:
-      tryToAdd(addSign);
+    case CURSORMODE_SIGNPENDING:
+      cursorModeSignDirectionPicking();
+      cursorMode = CURSORMODE_SIGNDIRECTIONPICKING;
       break;
+  }
+}
+
+function triggerUpClickEvent() {
+  switch (cursorMode) {
+    case CURSORMODE_SIGNDIRECTIONPICKING:
+        tryToAdd(addSign, function() { return pendingSignLoc });
+        clearLine();
+        cursorModeSignPending();
+        break;
   }
 }
 
@@ -141,20 +196,36 @@ function cursorModeHauntedTree() {
   cursorsprite.alpha = .3;
 }
 
-function cursorModeSign() {
+function cursorModeSignPending() {
   cursorsprite.alpha = 0;
-  cursorMode = CURSORMODE_SIGN;
+  cursorMode = CURSORMODE_SIGNPENDING;
   cursorsprite = signcursor;
   cursorsprite.alpha = .3;
 }
 
-function tryToAdd(addFunction) {
+function cursorModeSignDirectionPicking() {
+  cursorsprite.alpha = 0;
+  cursorMode = CURSORMODE_SIGNDIRECTIONPICKING;
+  cursorsprite = signcursor;
+  cursorsprite.alpha = .3;
+  pendingSignLoc = getCursorGridLoc();
+}
+
+function tryToAdd(addFunction, whereToAddFunc) {
+  var whereToAdd = whereToAddFunc.apply(this);
+  if (! visibleToKid(whereToAdd)) {
+    addFunction.apply(this, [whereToAdd]);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+function getCursorGridLoc() {
   var cursorGridPosX = getGridPosSingle(game.input.mousePointer.x);
   var cursorGridPosY = getGridPosSingle(game.input.mousePointer.y);
   var cursorGridPos = new Phaser.Point(cursorGridPosX, cursorGridPosY);
-  if (! visibleToKid(cursorGridPos)) {
-    addFunction.apply(this, [cursorGridPos]);
-  }
+  return cursorGridPos;
 }
 
 function visibleToKid(gridPositionInQuestion) {
@@ -518,6 +589,7 @@ function setGridLocation(thing, gridLocation) {
 function locationToPixelCenter(location) {
   return new Phaser.Point(location.x * TILE_SIZE + TILE_SIZE / 2, location.y * TILE_SIZE + TILE_SIZE / 2);
 }
+
 function locationToPixelTopLeft(location) {
   return new Phaser.Point(location.x * TILE_SIZE, location.y * TILE_SIZE);
 
@@ -529,8 +601,13 @@ function spriteCenter(tile) {
 
 
 function update() {
+  //TODO: This probably should be refactored somehow (too specific to sign)
+  if (cursorMode != CURSORMODE_SIGNDIRECTIONPICKING) {
   cursorsprite.x = lockToGrid(game.input.mousePointer.x);
   cursorsprite.y = lockToGrid(game.input.mousePointer.y);
+}
+
+  drawLine();
 }
 
 function moveTo(kid, gridLoc, speed) {
