@@ -78,6 +78,7 @@ var TILEs;
 
 //related to line drawing
 var bmd;
+var line;
 
 function preload() {
 
@@ -98,16 +99,27 @@ function clearLine() {
 
 function drawLine(){
   if (cursorMode == CURSORMODE_SIGNDIRECTIONPICKING) {
-  bmd.clear();
-  bmd.ctx.beginPath();
-  bmd.ctx.beginPath();
+
+
+
   var pendingSignPixelLoc = locationToPixelCenter(pendingSignLoc);
-  bmd.ctx.moveTo(pendingSignPixelLoc.x, pendingSignPixelLoc.y);
-  bmd.ctx.lineTo(game.input.x , game.input.y);
-  bmd.ctx.lineWidth = 2;
-  bmd.ctx.stroke();
-  bmd.ctx.closePath();
-  bmd.render();
+  line = new Phaser.Line(pendingSignPixelLoc.x, pendingSignPixelLoc.y, game.input.x, game.input.y);
+
+  // bmd.clear();
+  // bmd.ctx.beginPath();
+  // bmd.ctx.moveTo(pendingSignPixelLoc.x, pendingSignPixelLoc.y);
+  // bmd.ctx.lineTo(game.input.x, game.input.y);
+  // bmd.ctx.lineWidth = 2;
+  // bmd.ctx.stroke();
+  // bmd.ctx.closePath();
+  // bmd.render();
+
+  //TODO: has to be a better way to do this
+
+  //TODO: probably should be elsewhere
+  cursorsprite.angle = snapAngleToCardinalDirection(Phaser.Math.radToDeg(line.angle));
+  xMonitor = Phaser.Math.radToDeg(line.angle);
+  yMonitor = Phaser.Math.radToDeg(line.angle);
 }
   //bmd.refreshBuffer();
 };
@@ -127,12 +139,15 @@ function create() {
     signs = game.add.group();
 
     bmd = game.add.bitmapData(BOARD_WIDTH,BOARD_HEIGHT);
-    var color = 'white';
-
+    line = new Phaser.Line(0,0,0,0);
+    var color = 'grey';
+    //
     bmd.ctx.beginPath();
-    bmd.ctx.lineWidth = "2";
+    bmd.ctx.lineWidth = "1";
     bmd.ctx.strokeStyle = color;
+    bmd.alpha = .5;
     bmd.ctx.stroke();
+
     sprite = game.add.sprite(0, 0, bmd);
 
     setupCursors();
@@ -153,15 +168,34 @@ function create() {
 
 }
 
+function snapAngleToCardinalDirection(angle) {
+  if (angle < 0) {
+    angle = 360 + angle;
+  }
+  var result;
+
+  var remainder = angle % 45;
+  if (remainder > 45/2) {
+    result = angle + (45 - remainder);
+  } else {
+    result = angle - (remainder);
+  }
+
+  return result;
+}
 
 function setupCursors() {
   //CURSOR SETUP
   cursors = game.input.keyboard.createCursorKeys();
   hauntedtreecursor = game.add.sprite(25, 25, 'hauntedtree');
   hauntedtreecursor.alpha = .3;
+  hauntedtreecursor.anchor.x = .5;
+  hauntedtreecursor.anchor.y = .5;
 
   signcursor = game.add.sprite(25, 35, 'sign');
   signcursor.alpha = .3;
+  signcursor.anchor.x = .5;
+  signcursor.anchor.y = .5;
 
   cursorsprite = hauntedtreecursor;
   cursorModeHauntedTree();
@@ -200,6 +234,8 @@ function cursorModeSignPending() {
   cursorsprite.alpha = 0;
   cursorMode = CURSORMODE_SIGNPENDING;
   cursorsprite = signcursor;
+  cursorsprite.scale.x = 1;
+  cursorsprite.scale.y = 1;
   cursorsprite.alpha = .3;
 }
 
@@ -207,7 +243,9 @@ function cursorModeSignDirectionPicking() {
   cursorsprite.alpha = 0;
   cursorMode = CURSORMODE_SIGNDIRECTIONPICKING;
   cursorsprite = signcursor;
-  cursorsprite.alpha = .3;
+  cursorsprite.alpha = .7;
+  cursorsprite.scale.x = 2.5;
+  cursorsprite.scale.y = 2.5;
   pendingSignLoc = getCursorGridLoc();
 }
 
@@ -263,6 +301,31 @@ if (dir.equals(Direction.E)) { sign.angle = 0; } else if
 (dir.equals(Direction.NE)) { sign.angle = 315; }
 }
 
+function angleToDirection(unSnappedAngle) {
+  var angle = snapAngleToCardinalDirection(unSnappedAngle);
+  switch(angle) {
+    case 0:
+    return Direction.E;
+    case 45:
+    return Direction.SE;
+    case 90:
+    return Direction.S;
+    case 135:
+    return Direction.SW;
+    case 180:
+    return Direction.W;
+    case 225:
+    return Direction.NW;
+    case 270:
+    return Direction.N;
+    case 315:
+    return Direction.NE;
+    default:
+    log("Defaulted in angleToDirection");
+    return Direction.E;
+  }
+}
+
 function addSign(gridPositionToAddTo) {
 
     var sign = signs.create(0, 0, 'sign');
@@ -270,7 +333,8 @@ function addSign(gridPositionToAddTo) {
     sign.anchor.y = .5;
     setGridLocation(sign, gridPositionToAddTo);
     sign.name = 'sign';
-    setSignDirection(sign, getRandomDirection());
+    //TODO: Angle handling here is a bit of a hack
+    setSignDirection(sign, angleToDirection(cursorsprite.angle));
 
 
     //listen to surrounding tiles
@@ -600,11 +664,18 @@ function spriteCenter(tile) {
 }
 
 
+var xMonitor;
+var yMonitor;
+
 function update() {
   //TODO: This probably should be refactored somehow (too specific to sign)
   if (cursorMode != CURSORMODE_SIGNDIRECTIONPICKING) {
-  cursorsprite.x = lockToGrid(game.input.mousePointer.x);
-  cursorsprite.y = lockToGrid(game.input.mousePointer.y);
+  var newCursorLoc = pixelToGridCenter(new Phaser.Point(game.input.mousePointer.x, game.input.mousePointer.y));
+  cursorsprite.x = newCursorLoc.x;
+  cursorsprite.y = newCursorLoc.y;
+  //xMonitor =  game.input.mousePointer.x;
+  //yMonitor = newCursorLoc.y;
+
 }
 
   drawLine();
@@ -637,6 +708,13 @@ function willHitEdge(kid, movingTo) {
 
 function render() {
   game.debug.text(result, 32,32);
+  log(xMonitor + ", " + yMonitor + " ... ;");
+
+  //TODO: Gotta be a better way to do this
+  if (cursorMode == CURSORMODE_SIGNDIRECTIONPICKING) {
+    //game.debug.geom(line);
+    game.debug.lineInfo(line, 32, 32);
+  }
 }
 
 function log(message) {
@@ -703,7 +781,13 @@ function getGridPosSingle(num) {
 }
 
 function getGridPosOfPixel(coordinate) {
+  //xMonitor = coordinate.x;
+  //yMonitor = coordinate.y;
   return new Phaser.Point(Math.floor(coordinate.x/TILE_SIZE), Math.floor(coordinate.y/TILE_SIZE));
+}
+
+function pixelToGridCenter(pixelLocation) {
+  return locationToPixelCenter(getGridPosOfPixel(pixelLocation));
 }
 
 function getGridPosOfObject(object) {
